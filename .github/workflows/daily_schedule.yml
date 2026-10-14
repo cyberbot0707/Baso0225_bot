@@ -1,0 +1,38 @@
+name: Daily MIREA Schedule
+
+on:
+  schedule:
+    # 18:00 UTC = 21:00 по Москве (каждый день)
+    - cron: '0 18 * * *'
+  workflow_dispatch: # Позволяет запускать проверку вручную по кнопке на сайте GitHub!
+
+permissions:
+  contents: write
+
+jobs:
+  send-and-update:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Скачивание репозитория
+        uses: actions/checkout@v4
+
+      - name: Установка Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Установка библиотек
+        run: pip install -r requirements.txt
+
+      - name: Отправка в Telegram и генерация сайта
+        env:
+          BOT_TOKEN: ${{ secrets.BOT_TOKEN }}
+          CHAT_ID: ${{ secrets.CHAT_ID }}
+        run: python send_schedule.py
+
+      - name: Обновление сайта расписания (GitHub Pages)
+        run: |
+          git config --global user.name "Schedule Bot"
+          git config --global user.email "bot@github.com"
+          git add index.html
+          git diff --quiet && git diff --staged --quiet || (git commit -m "Update schedule page" && git push)
